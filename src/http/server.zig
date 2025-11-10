@@ -111,7 +111,7 @@ pub const Server = struct {
     provision_pool: *Pool(Provision),
     connection_count: *usize,
     allocator: std.mem.Allocator,
-    stop_event: Io.File,
+    stop_event: [2]std.posix.fd_t,
 
     pub fn init(allocator: std.mem.Allocator, config: ServerConfig) !Self {
         const count = config.connection_count_max orelse 1024;
@@ -142,7 +142,7 @@ pub const Server = struct {
             provision.request = Request.init(allocator);
             provision.response = Response.init(allocator);
         }
-        return Self{ .config = config, .provision_pool = provision_pool, .connection_count = connection_count, .allocator = allocator, .stop_event = .{ .handle = try std.posix.eventfd(0, 0) } };
+        return Self{ .config = config, .provision_pool = provision_pool, .connection_count = connection_count, .allocator = allocator, .stop_event = try std.posix.pipe() };
     }
 
     pub fn deinit(self: *const Self) void {
@@ -158,11 +158,12 @@ pub const Server = struct {
         }
         self.provision_pool.deinit();
         self.allocator.destroy(self.provision_pool);
-        std.posix.close(self.stop_event.handle);
+        std.posix.close(self.stop_event[0]);
+        std.posix.close(self.stop_event[1]);
     }
 
     pub fn stop(self: *const Self) void {
-        _ = std.posix.write(self.stop_event.handle, std.mem.asBytes(&@as(u64, 1))) catch {};
+        _ = std.posix.write(self.stop_event[1], std.mem.asBytes(&@as(u64, 1))) catch {};
     }
 
     const RequestBodyState = struct {
@@ -423,7 +424,7 @@ pub const Server = struct {
         var group: Io.Group = .init;
         defer group.cancel(io);
 
-        var e = io.async(stopEvent, .{ io, self.stop_event });
+        var e = io.async(stopEvent, .{ io, .{ .handle = self.stop_event[0] } });
         defer e.cancel(io);
 
         while (true) {

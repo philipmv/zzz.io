@@ -21,7 +21,7 @@ pub fn Compression(comptime compression: Kind) Layer {
                 const respond = try next.run();
                 const response = next.context.response;
                 if (response.body) |body| if (respond == .standard) {
-                    var compressed: std.Io.Writer.Allocating = try .initCapacity(next.context.allocator, body.len);
+                    var compressed: std.Io.Writer.Allocating = try .initCapacity(next.context.allocator, @max(body.len, 64));
                     errdefer compressed.deinit();
 
                     var buf: [std.compress.flate.max_window_len]u8 = undefined;

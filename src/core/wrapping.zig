@@ -20,32 +20,17 @@ pub fn wrap(comptime I: type, value: anytype) I {
             .pointer => break :context @intFromPtr(value),
             .void => break :context @intFromEnum(Wrapped.void),
             .int => |info| {
-                const uint = @Type(std.builtin.Type{
-                    .int = .{
-                        .signedness = .unsigned,
-                        .bits = info.bits,
-                    },
-                });
+                const uint = @Int(.unsigned, info.bits);
                 break :context @intCast(@as(uint, @bitCast(value)));
             },
             .comptime_int => break :context @intCast(value),
             .float => |info| {
-                const uint = @Type(std.builtin.Type{
-                    .int = .{
-                        .signedness = .unsigned,
-                        .bits = info.bits,
-                    },
-                });
+                const uint = @Int(.unsigned, info.bits);
                 break :context @intCast(@as(uint, @bitCast(value)));
             },
             .comptime_float => break :context @intCast(@as(I, @bitCast(value))),
             .@"struct" => |info| {
-                const uint = @Type(std.builtin.Type{
-                    .int = .{
-                        .signedness = .unsigned,
-                        .bits = @bitSizeOf(info.backing_integer.?),
-                    },
-                });
+                const uint = @Int(.unsigned, @bitSizeOf(info.backing_integer.?));
                 break :context @intCast(@as(uint, @bitCast(value)));
             },
             .bool => break :context if (value) @intFromEnum(Wrapped.true) else @intFromEnum(Wrapped.false),
@@ -70,35 +55,16 @@ pub fn unwrap(comptime T: type, value: anytype) T {
             .pointer => break :context @ptrFromInt(value),
             .void => break :context {},
             .int => |info| {
-                const uint = @Type(std.builtin.Type{
-                    .int = .{
-                        .signedness = .unsigned,
-                        .bits = info.bits,
-                    },
-                });
+                const uint = @Int(.unsigned, info.bits);
                 break :context @bitCast(@as(uint, @intCast(value)));
             },
             .float => |info| {
-                const uint = @Type(std.builtin.Type{
-                    .int = .{
-                        .signedness = .unsigned,
-                        .bits = info.bits,
-                    },
-                });
-                const float = @Type(std.builtin.Type{
-                    .float = .{
-                        .bits = info.bits,
-                    },
-                });
+                const uint = @Int(.unsigned, info.bits);
+                const float = @Int(.float, info.bits);
                 break :context @as(float, @bitCast(@as(uint, @intCast(value))));
             },
             .@"struct" => |info| {
-                const uint = @Type(std.builtin.Type{
-                    .int = .{
-                        .signedness = .unsigned,
-                        .bits = @bitSizeOf(info.backing_integer.?),
-                    },
-                });
+                const uint = @Int(.unsigned, @bitSizeOf(info.backing_integer.?));
                 break :context @bitCast(@as(uint, @intCast(value)));
             },
             .bool => {

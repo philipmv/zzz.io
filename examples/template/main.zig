@@ -124,7 +124,7 @@ pub fn main() !void {
     const host: []const u8 = "0.0.0.0";
     const port: u16 = 9862;
 
-    var gpa = std.heap.GeneralPurposeAllocator(.{ .thread_safe = true }){};
+    var gpa: std.heap.DebugAllocator(.{}) = .init;
     const allocator = gpa.allocator();
     defer _ = gpa.deinit();
 
@@ -147,7 +147,7 @@ pub fn main() !void {
     defer router.deinit(allocator);
 
     const addr = try Io.net.IpAddress.parse(host, port);
-    var s = try addr.listen(io, .{ .reuse_address = true });
+    var s = try addr.listen(io, .{});
     defer s.deinit(io);
 
     server = try Server.init(allocator, .{

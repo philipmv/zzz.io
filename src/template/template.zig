@@ -100,7 +100,7 @@ pub fn print(writer: *Writer, comptime tmpl: []const u8, args: anytype) !void {
                     .pointer, .array => for (value) |v| {
                         try print(writer, t, v);
                     },
-                    else => @compileError("not indexable filed with name '" ++ name ++ "'"),
+                    else => @compileError("not an indexable field with name '" ++ name ++ "'"),
                 },
             }
             // Go past end tag

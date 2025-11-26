@@ -379,7 +379,7 @@ pub const Server = struct {
                         if (std.mem.eql(u8, connection, "close")) break :http_loop;
                         if (config.keepalive_count_max) |max| {
                             if (keepalive_count > max) {
-                                log.debug("closing connection, exceeded keepalive max", .{});
+                                log.warn("closing connection, exceeded keepalive max", .{});
                                 break :http_loop;
                             }
 
@@ -403,7 +403,7 @@ pub const Server = struct {
                 if (std.mem.eql(u8, connection, "close")) break;
                 if (config.keepalive_count_max) |max| {
                     if (keepalive_count > max) {
-                        log.debug("closing connection, exceeded keepalive max", .{});
+                        log.warn("closing connection, exceeded keepalive max", .{});
                         break;
                     }
 
@@ -435,7 +435,7 @@ pub const Server = struct {
                 .e => break,
                 .s => |stream| {
                     if (self.config.connection_count_max) |max| if (@atomicLoad(usize, self.connection_count, .acquire) > max) {
-                        log.debug("over connection max, closing", .{});
+                        log.warn("over connection max, closing", .{});
                         (try stream).close(io);
                         continue;
                     };

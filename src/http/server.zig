@@ -442,7 +442,7 @@ pub const Server = struct {
 
                     log.debug("queuing up a new accept request", .{});
 
-                    group.async(io, doWork, .{ self.allocator, io, self.config, router, try stream, self.provision_pool, self.connection_count });
+                    try group.concurrent(io, doWork, .{ self.allocator, io, self.config, router, try stream, self.provision_pool, self.connection_count });
                 },
             }
         }

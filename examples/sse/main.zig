@@ -18,7 +18,7 @@ fn base_handler(ctx: *const Context, _: void) !Respond {
         \\ <!DOCTYPE html>
         \\ <html>
         \\ <head>
-        \\ <script type="module" src="https://cdn.jsdelivr.net/gh/starfederation/datastar@1.0.0-RC.6/bundles/datastar.js"></script>
+        \\ <script type="module" src="https://cdn.jsdelivr.net/gh/starfederation/datastar@1.0.0-RC.7/bundles/datastar.js"></script>
         \\ </head>
         \\ <body>
         \\ <div id="counter">0</div>
@@ -80,7 +80,7 @@ fn shutdown(_: std.c.SIG) callconv(.c) void {
 
 var server: Server = undefined;
 
-pub fn main() !void {
+pub fn main(init: std.process.Init.Minimal) !void {
     const host: []const u8 = "0.0.0.0";
     const port: u16 = 9862;
 
@@ -94,7 +94,7 @@ pub fn main() !void {
         .flags = 0,
     }, null);
 
-    var threaded: std.Io.Threaded = .init(allocator);
+    var threaded: std.Io.Threaded = .init(allocator, .{ .environ = init.environ });
     defer threaded.deinit();
     const io = threaded.io();
 

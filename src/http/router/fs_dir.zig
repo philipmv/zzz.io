@@ -89,7 +89,7 @@ pub const FsDir = struct {
     pub fn serve(comptime url_path: []const u8, dir: *const Dir) Layer {
         const url_with_match_all = comptime std.fmt.comptimePrint(
             "{s}/%r",
-            .{std.mem.trimRight(u8, url_path, "/")},
+            .{std.mem.trimEnd(u8, url_path, "/")},
         );
 
         return Route.init(url_with_match_all).get(dir, fs_dir_handler).layer();

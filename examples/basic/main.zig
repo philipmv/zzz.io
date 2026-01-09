@@ -26,7 +26,7 @@ fn shutdown(_: std.c.SIG) callconv(.c) void {
 
 var server: Server = undefined;
 
-pub fn main() !void {
+pub fn main(init: std.process.Init.Minimal) !void {
     const host: []const u8 = "0.0.0.0";
     const port: u16 = 9862;
 
@@ -40,7 +40,7 @@ pub fn main() !void {
         .flags = 0,
     }, null);
 
-    var threaded: std.Io.Threaded = .init(allocator);
+    var threaded: std.Io.Threaded = .init(allocator, .{ .environ = init.environ });
     defer threaded.deinit();
     const io = threaded.io();
 

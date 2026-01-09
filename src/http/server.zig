@@ -142,7 +142,7 @@ pub const Server = struct {
             provision.request = Request.init(allocator);
             provision.response = Response.init(allocator);
         }
-        return Self{ .config = config, .provision_pool = provision_pool, .connection_count = connection_count, .allocator = allocator, .stop_event = try std.posix.pipe() };
+        return Self{ .config = config, .provision_pool = provision_pool, .connection_count = connection_count, .allocator = allocator, .stop_event = try std.Io.Threaded.pipe2(@bitCast(@as(u32, 0))) };
     }
 
     pub fn deinit(self: *const Self) void {

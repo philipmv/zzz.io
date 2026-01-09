@@ -73,7 +73,7 @@ fn generate_handler(ctx: *const Context, _: void) !Respond {
     });
 }
 
-pub fn main() !void {
+pub fn main(init: std.process.Init.Minimal) !void {
     const host: []const u8 = "0.0.0.0";
     const port: u16 = 9862;
 
@@ -81,7 +81,7 @@ pub fn main() !void {
     const allocator = gpa.allocator();
     defer _ = gpa.deinit();
 
-    var threaded: std.Io.Threaded = .init(allocator);
+    var threaded: std.Io.Threaded = .init(allocator, .{ .environ = init.environ });
     defer threaded.deinit();
     const io = threaded.io();
 

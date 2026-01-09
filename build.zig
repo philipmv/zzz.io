@@ -48,12 +48,9 @@ fn add_example(
             .target = target,
             .optimize = optimize,
             .strip = false,
+            .link_libc = link_libc,
         }),
     });
-
-    if (link_libc) {
-        example.linkLibC();
-    }
 
     example.root_module.addImport("zzz", zzz_module);
 

@@ -26,13 +26,9 @@ fn shutdown(_: std.c.SIG) callconv(.c) void {
 
 var server: Server = undefined;
 
-pub fn main(init: std.process.Init.Minimal) !void {
+pub fn main(init: std.process.Init) !void {
     const host: []const u8 = "0.0.0.0";
     const port: u16 = 9862;
-
-    var gpa: std.heap.DebugAllocator(.{}) = .init;
-    const allocator = gpa.allocator();
-    defer _ = gpa.deinit();
 
     std.posix.sigaction(std.posix.SIG.TERM, &.{
         .handler = .{ .handler = shutdown },
@@ -40,24 +36,20 @@ pub fn main(init: std.process.Init.Minimal) !void {
         .flags = 0,
     }, null);
 
-    var threaded: std.Io.Threaded = .init(allocator, .{ .environ = init.environ });
-    defer threaded.deinit();
-    const io = threaded.io();
-
-    var router = try Router.init(allocator, &.{
+    var router = try Router.init(init.gpa, &.{
         Route.init("/").get({}, base_handler).layer(),
     }, .{});
-    defer router.deinit(allocator);
+    defer router.deinit(init.gpa);
 
     const addr = try Io.net.IpAddress.parse(host, port);
-    var s = try addr.listen(io, .{ .kernel_backlog = 4096 });
-    defer s.deinit(io);
+    var s = try addr.listen(init.io, .{ .kernel_backlog = 4096 });
+    defer s.deinit(init.io);
 
-    server = try Server.init(allocator, .{
+    server = try Server.init(init.gpa, init.io, .{
         .socket_buffer_bytes = 1024 * 2,
         .keepalive_count_max = null,
         .connection_count_max = 1024,
     });
     defer server.deinit();
-    try server.serve(io, &router, &s);
+    try server.serve(&router, &s);
 }

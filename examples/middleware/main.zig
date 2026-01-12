@@ -91,7 +91,7 @@ pub fn main(init: std.process.Init.Minimal) !void {
     var s = try addr.listen(io, .{});
     defer s.deinit(io);
 
-    server = try Server.init(allocator, .{});
+    server = try Server.init(allocator, io, .{});
     defer server.deinit();
-    try server.serve(io, &router, &s);
+    try server.serve(&router, &s);
 }

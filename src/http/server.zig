@@ -111,9 +111,10 @@ pub const Server = struct {
     provision_pool: *Pool(Provision),
     connection_count: *usize,
     allocator: std.mem.Allocator,
-    stop_event: [2]std.posix.fd_t,
+    io: Io,
+    stop_event: [2]Io.File,
 
-    pub fn init(allocator: std.mem.Allocator, config: ServerConfig) !Self {
+    pub fn init(allocator: Allocator, io: Io, config: ServerConfig) !Self {
         const count = config.connection_count_max orelse 1024;
 
         const provision_pool = try allocator.create(Pool(Provision));
@@ -142,7 +143,9 @@ pub const Server = struct {
             provision.request = Request.init(allocator);
             provision.response = Response.init(allocator);
         }
-        return Self{ .config = config, .provision_pool = provision_pool, .connection_count = connection_count, .allocator = allocator, .stop_event = try std.Io.Threaded.pipe2(@bitCast(@as(u32, 0))) };
+
+        const fds = try std.Io.Threaded.pipe2(.{});
+        return Self{ .config = config, .provision_pool = provision_pool, .connection_count = connection_count, .allocator = allocator, .io = io, .stop_event = .{ .{ .handle = fds[0] }, .{ .handle = fds[1] } } };
     }
 
     pub fn deinit(self: *const Self) void {
@@ -158,12 +161,18 @@ pub const Server = struct {
         }
         self.provision_pool.deinit();
         self.allocator.destroy(self.provision_pool);
-        std.posix.close(self.stop_event[0]);
-        std.posix.close(self.stop_event[1]);
+        self.stop_event[0].close(self.io);
+        self.stop_event[1].close(self.io);
     }
 
     pub fn stop(self: *const Self) void {
-        _ = std.posix.write(self.stop_event[1], std.mem.asBytes(&@as(u64, 1))) catch {};
+        const event: Io.File = self.stop_event[1];
+        event.writeStreamingAll(self.io, std.mem.asBytes(&@as(u64, 1))) catch {};
+    }
+
+    fn stopEvent(io: Io, event: Io.File) void {
+        var cnt: u64 = undefined;
+        _ = event.readStreaming(io, &.{std.mem.asBytes(&cnt)}) catch {};
     }
 
     const RequestBodyState = struct {
@@ -420,11 +429,12 @@ pub const Server = struct {
     }
 
     /// Serve an HTTP server.
-    pub fn serve(self: *Self, io: Io, router: *const Router, server: *Io.net.Server) !void {
+    pub fn serve(self: *Self, router: *const Router, server: *Io.net.Server) !void {
+        const io = self.io;
         var group: Io.Group = .init;
         defer group.cancel(io);
 
-        var e = io.async(stopEvent, .{ io, .{ .handle = self.stop_event[0] } });
+        var e = io.async(stopEvent, .{ io, self.stop_event[0] });
         defer e.cancel(io);
 
         while (true) {
@@ -448,11 +458,3 @@ pub const Server = struct {
         }
     }
 };
-
-fn stopEvent(io: Io, event: Io.File) void {
-    var buf: [8]u8 = undefined;
-    var reader = event.reader(io, &buf);
-    const r = &reader.interface;
-    var cnt: u64 = undefined;
-    r.readSliceAll(std.mem.asBytes(&cnt)) catch unreachable;
-}

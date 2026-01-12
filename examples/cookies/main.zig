@@ -62,11 +62,11 @@ pub fn main(init: std.process.Init.Minimal) !void {
     var s = try addr.listen(io, .{});
     defer s.deinit(io);
 
-    server = try Server.init(allocator, .{
+    server = try Server.init(allocator, io, .{
         .socket_buffer_bytes = 1024 * 2,
         .keepalive_count_max = null,
         .connection_count_max = 10,
     });
     defer server.deinit();
-    try server.serve(io, &router, &s);
+    try server.serve(&router, &s);
 }

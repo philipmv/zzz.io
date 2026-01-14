@@ -12,6 +12,7 @@ const Context = http.Context;
 const Route = http.Route;
 const Respond = http.Respond;
 const SSEWriter = http.SSEWriter;
+const ChunkWriter = http.ChunkWriter;
 
 fn base_handler(ctx: *const Context, _: void) !Respond {
     const body =
@@ -34,16 +35,9 @@ fn base_handler(ctx: *const Context, _: void) !Respond {
     });
 }
 
-fn counter_handler(ctx: *const Context, _: void) !Respond {
-    var buf: [1024]u8 = undefined;
-    var writer = ctx.stream.writer(ctx.io, &buf);
-    const w = &writer.interface;
-
-    try ctx.response.headers.put("Cache-Control", "no-cache");
-    ctx.response.status = .OK;
-    ctx.response.mime = .SSE;
-    try ctx.response.headers_into_writer(w, null);
-    try w.flush();
+fn sendData(io: Io, w: *Io.Writer) !void {
+    var buf: [128]u8 = undefined;
+    var cw: ChunkWriter = .init(w, &buf);
 
     var ssebuf: [1024]u8 = undefined;
     var cnt: u32 = 0;
@@ -54,22 +48,48 @@ fn counter_handler(ctx: *const Context, _: void) !Respond {
         \\</div>
     ;
 
-    const res = blk: while (true) : (cnt += 1) {
+    while (cnt <= 10) : (cnt += 1) {
         var sse: SSEWriter = try .init(
-            w,
+            &cw.interface,
             &ssebuf,
             "event: datastar-patch-elements",
             "data: elements",
         );
         const ws = &sse.interface;
         try ws.print(div, .{cnt});
-        ws.flush() catch |e| break :blk e;
-        w.flush() catch |e| break :blk e;
-        try ctx.io.sleep(.fromSeconds(1), .awake);
-    };
-    switch (res) {
-        error.WriteFailed => return .close, // connection is closed client side
+        try ws.flush();
+        try io.sleep(.fromSeconds(1), .awake);
     }
+
+    try cw.end();
+}
+
+fn counter_handler(ctx: *const Context, _: void) !Respond {
+    var buf: [1024]u8 = undefined;
+    var writer = ctx.stream.writer(ctx.io, &buf);
+    const w = &writer.interface;
+
+    try ctx.response.headers.put("Cache-Control", "no-cache");
+    try ctx.response.headers.put("Transfer-Encoding", "chunked");
+    ctx.response.status = .OK;
+    ctx.response.mime = .SSE;
+    try ctx.response.headers_into_writer(w, null);
+    try w.flush();
+
+    sendData(ctx.io, w) catch |err| {
+        switch (err) {
+            error.WriteFailed => {
+                if (writer.err) |e| {
+                    switch (e) {
+                        error.SocketUnconnected => return .close, // connection is closed
+                        else => return e,
+                    }
+                }
+            },
+            else => {},
+        }
+        return err;
+    };
 
     return .responded;
 }

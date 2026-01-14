@@ -8,8 +8,9 @@ cont: bool,
 
 const Self = @This();
 
-pub fn init(writer: *Writer, buf: []u8, event: []const u8, data: []const u8) Writer.Error!Self {
-    try writer.print("{s}\n", .{event});
+pub fn init(writer: *Writer, buf: []u8, header: []const u8, data: []const u8) Writer.Error!Self {
+    if (header.len > 0)
+        try writer.print("{s}\n", .{header});
     return initInstance(writer, buf, data);
 }
 
@@ -34,6 +35,7 @@ pub fn flush(w: *Writer) Writer.Error!void {
     if (self.cont)
         try self.writer.writeByte('\n');
     try self.writer.writeAll("\n\n");
+    try self.writer.flush();
 }
 
 fn drain(w: *Writer, data: []const []const u8, splat: usize) Writer.Error!usize {
@@ -41,21 +43,21 @@ fn drain(w: *Writer, data: []const []const u8, splat: usize) Writer.Error!usize 
     const buffered = w.buffered();
     var n: usize = 0;
     if (buffered.len > 0)
-        n = try self.writeAll(buffered);
+        n = try self.write(buffered);
     for (data[0 .. data.len - 1]) |d| {
         if (d.len == 0) continue;
-        n += try self.writeAll(d);
+        n += try self.write(d);
     }
     const pattern = data[data.len - 1];
     if (splat > 0 and pattern.len > 0) {
         for (0..splat) |_| {
-            n += try self.writeAll(pattern);
+            n += try self.write(pattern);
         }
     }
     return w.consume(n);
 }
 
-fn writeAll(self: *Self, data: []const u8) Writer.Error!usize {
+fn write(self: *Self, data: []const u8) Writer.Error!usize {
     std.debug.assert(data.len > 0);
     const w = self.writer;
     const cont = self.cont;

@@ -305,9 +305,9 @@ pub const Server = struct {
                     }
 
                     var vecs: [1][]u8 = .{provision.recv_slice};
-                    const recv_count = r.readVec(&vecs) catch |e| switch (e) {
+                    const recv_count = r.readVec(&vecs) catch |err| switch (err) {
                         error.EndOfStream => break, // Closed
-                        else => break :http_loop e,
+                        else => |e| break :http_loop e,
                     };
 
                     provision.zc_recv_buffer.mark_written(recv_count);

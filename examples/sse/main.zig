@@ -82,7 +82,7 @@ fn counter_handler(ctx: *const Context, _: void) !Respond {
                 if (writer.err) |e| {
                     switch (e) {
                         error.SocketUnconnected => return .close, // connection is closed
-                        else => return e,
+                        else => |ee| return ee,
                     }
                 }
             },

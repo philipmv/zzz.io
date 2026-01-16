@@ -37,14 +37,14 @@ pub const FsDir = struct {
             }
         };
 
-        const file = dir.openFile(ctx.io, file_path_z, .{ .mode = .read_only }) catch |e| switch (e) {
+        const file = dir.openFile(ctx.io, file_path_z, .{ .mode = .read_only }) catch |err| switch (err) {
             error.FileNotFound => {
                 return ctx.response.apply(.{
                     .status = .@"Not Found",
                     .mime = Mime.HTML,
                 });
             },
-            else => return e,
+            else => |e| return e,
         };
         const stat = try file.stat(ctx.io);
 

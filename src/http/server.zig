@@ -211,7 +211,7 @@ pub const Server = struct {
         stream: Stream,
         provisions: *Pool(Provision),
         connection_count: *usize,
-    ) void {
+    ) Io.Cancelable!void {
         _ = @atomicRmw(usize, connection_count, .Add, 1, .acq_rel);
         defer _ = @atomicRmw(usize, connection_count, .Sub, 1, .acq_rel);
 
@@ -244,9 +244,9 @@ pub const Server = struct {
             .request => |*kind| switch (kind.*) {
                 .header => {
                     var vecs: [1][]u8 = .{provision.recv_slice};
-                    const recv_count = r.readVec(&vecs) catch |e| switch (e) {
+                    const recv_count = r.readVec(&vecs) catch |err| switch (err) {
                         error.EndOfStream => break, // Closed
-                        else => break :http_loop e,
+                        else => |e| break :http_loop e,
                     };
 
                     provision.zc_recv_buffer.mark_written(recv_count);
@@ -358,6 +358,7 @@ pub const Server = struct {
                 };
 
                 const next_respond: Respond = next.run() catch |e| blk: {
+                    if (e == error.Canceled) break :http_loop error.Canceled;
                     log.warn("req{d} - \"{s} {s}\" {} ({any})", .{
                         index,
                         @tagName(provision.request.method.?),
@@ -424,6 +425,7 @@ pub const Server = struct {
         };
 
         res catch |e| {
+            if (e == error.Canceled) return error.Canceled;
             log.err("{}", .{e});
         };
     }

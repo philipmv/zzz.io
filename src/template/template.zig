@@ -113,7 +113,7 @@ pub fn print(writer: *Writer, comptime tmpl: []const u8, args: anytype) !void {
             const value = @field(args, fields_info[pos].name);
             switch (@typeInfo(@TypeOf(value))) {
                 .pointer, .array => try writer.print("{s}", .{value}),
-                .int, .float => try writer.print("{d}", .{value}),
+                .comptime_int, .int, .comptime_float, .float => try writer.print("{d}", .{value}),
                 .@"enum" => try writer.print("{s}", .{@tagName(value)}),
                 else => try writer.print("{f}", .{value}),
             }

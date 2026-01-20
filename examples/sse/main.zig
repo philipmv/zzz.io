@@ -3,6 +3,7 @@ const log = std.log.scoped(.@"examples/basic");
 
 const zzz = @import("zzz");
 const http = zzz.HTTP;
+const template = zzz.template;
 
 const Io = std.Io;
 
@@ -15,24 +16,26 @@ const SSEWriter = http.SSEWriter;
 const ChunkWriter = http.ChunkWriter;
 
 fn base_handler(ctx: *const Context, _: void) !Respond {
-    const body =
-        \\ <!DOCTYPE html>
-        \\ <html>
-        \\ <head>
-        \\ <script type="module" src="https://cdn.jsdelivr.net/gh/starfederation/datastar@1.0.0-RC.7/bundles/datastar.js"></script>
-        \\ </head>
-        \\ <body>
-        \\ <div id="counter">0</div>
-        \\ <button data-on:click="@post('counter')">Start</button>
-        \\ </body>
-        \\ </html>
-    ;
+    var res: std.Io.Writer.Allocating = .init(ctx.allocator);
+    const writer = &res.writer;
 
-    return try ctx.response.apply(.{
+    const html = comptime template.include(
+        @embedFile("html/index.html"),
+        "counter",
+        @embedFile("html/counter.html"),
+    );
+    try template.print(writer, html, .{ .counter = 0 });
+
+    return ctx.response.apply(.{
         .status = .OK,
         .mime = http.Mime.HTML,
-        .body = body[0..],
+        .body = res.written(),
     });
+}
+
+fn writeCounter(w: *Io.Writer, cnt: u32) !void {
+    const html = @embedFile("html/counter.html");
+    try template.print(w, html, .{ .counter = cnt });
 }
 
 fn sendData(io: Io, w: *Io.Writer) !void {
@@ -42,12 +45,6 @@ fn sendData(io: Io, w: *Io.Writer) !void {
     var ssebuf: [1024]u8 = undefined;
     var cnt: u32 = 0;
 
-    const div =
-        \\<div id="counter">
-        \\{d}
-        \\</div>
-    ;
-
     while (cnt <= 10) : (cnt += 1) {
         var sse: SSEWriter = try .init(
             &cw.interface,
@@ -55,9 +52,8 @@ fn sendData(io: Io, w: *Io.Writer) !void {
             "event: datastar-patch-elements",
             "data: elements",
         );
-        const ws = &sse.interface;
-        try ws.print(div, .{cnt});
-        try ws.flush();
+        try writeCounter(&sse.interface, cnt);
+        try sse.end();
         try io.sleep(.fromSeconds(1), .awake);
     }
 

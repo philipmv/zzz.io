@@ -74,7 +74,6 @@ pub fn Pool(comptime T: type) type {
         }
 
         /// Linearly probes for an available slot in the pool.
-        /// If dynamic, this *might* grow the Pool.
         ///
         /// Returns the index into the Pool.
         pub fn borrow(self: *Self, io: Io) error{Full}!usize {
@@ -109,7 +108,6 @@ pub fn Pool(comptime T: type) type {
 
         /// Attempts to borrow at the given index.
         /// Asserts that it is an available slot.
-        /// This will never grow the Pool.
         pub fn borrow_assume_unset(self: *Self, io: Io, index: usize) usize {
             self.mutex.lockUncancelable(io);
             defer self.mutex.unlock(io);

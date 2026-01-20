@@ -3,38 +3,39 @@ const Writer = std.Io.Writer;
 
 writer: *Writer,
 interface: Writer,
-data: []const u8,
+prefix: []const u8,
 cont: bool,
 
 const Self = @This();
 
-pub fn init(writer: *Writer, buf: []u8, header: []const u8, data: []const u8) Writer.Error!Self {
+pub fn init(writer: *Writer, buf: []u8, header: []const u8, dataprefix: []const u8) Writer.Error!Self {
     if (header.len > 0)
         try writer.print("{s}\n", .{header});
-    return initInstance(writer, buf, data);
+    return initInstance(writer, buf, dataprefix);
 }
 
-fn initInstance(writer: *Writer, buf: []u8, data: []const u8) Self {
+fn initInstance(writer: *Writer, buf: []u8, dataprefix: []const u8) Self {
     return .{
         .writer = writer,
-        .data = data,
+        .prefix = dataprefix,
         .cont = false,
         .interface = .{
             .buffer = buf,
             .vtable = &.{
                 .drain = Self.drain,
-                .flush = Self.flush,
             },
         },
     };
 }
 
-pub fn flush(w: *Writer) Writer.Error!void {
-    const self: *@This() = @fieldParentPtr("interface", w);
-    try w.defaultFlush();
-    if (self.cont)
-        try self.writer.writeByte('\n');
-    try self.writer.writeAll("\n\n");
+pub fn end(self: *Self) Writer.Error!void {
+    const w = &self.interface;
+    try w.flush();
+    if (self.cont) {
+        try self.writer.writeAll("\n\n\n");
+    } else {
+        try self.writer.writeAll("\n\n");
+    }
     try self.writer.flush();
 }
 
@@ -60,21 +61,29 @@ fn drain(w: *Writer, data: []const []const u8, splat: usize) Writer.Error!usize 
 fn write(self: *Self, data: []const u8) Writer.Error!usize {
     std.debug.assert(data.len > 0);
     const w = self.writer;
-    const cont = self.cont;
+    var cont = self.cont;
     self.cont = (data[data.len - 1] != '\n');
 
-    var it = std.mem.splitScalar(u8, data, '\n');
-
-    if (cont) {
-        try w.writeAll(it.first());
-    } else {
-        try w.print("{s} {s}", .{ self.data, it.first() });
+    var d = data;
+    if (std.mem.findScalar(u8, d, '\n')) |i| {
+        if (cont) {
+            try w.writeAll(d[0 .. i + 1]);
+        } else {
+            try w.print("{s} {s}", .{ self.prefix, d[0 .. i + 1] });
+        }
+        d = d[i + 1 ..];
+        while (std.mem.findScalar(u8, d, '\n')) |j| : (d = d[j + 1 ..]) {
+            try w.print("{s} {s}", .{ self.prefix, d[0 .. j + 1] });
+        }
+        cont = false;
     }
 
-    while (it.next()) |s| {
-        try w.writeByte('\n');
-        if (it.peek() == null and s.len == 0) break;
-        try w.print("{s} {s}", .{ self.data, s });
+    if (d.len > 0) {
+        if (cont) {
+            try w.writeAll(d);
+        } else {
+            try w.print("{s} {s}", .{ self.prefix, d });
+        }
     }
 
     return data.len;

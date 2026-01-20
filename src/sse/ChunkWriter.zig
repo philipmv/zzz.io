@@ -20,6 +20,8 @@ pub fn init(writer: *Writer, buf: []u8) Self {
 }
 
 pub fn end(self: *Self) Writer.Error!void {
+    const w = &self.interface;
+    try w.flush();
     try self.writer.writeAll("0\r\n\r\n");
     try self.writer.flush();
 }

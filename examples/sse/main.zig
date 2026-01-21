@@ -73,18 +73,12 @@ fn counter_handler(ctx: *const Context, _: void) !Respond {
     try w.flush();
 
     sendData(ctx.io, w) catch |err| {
-        switch (err) {
-            error.WriteFailed => {
-                if (writer.err) |e| {
-                    switch (e) {
-                        error.SocketUnconnected => return .close, // connection is closed
-                        else => |ee| return ee,
-                    }
-                }
-            },
-            else => {},
+        sw: switch (@as(anyerror, err)) {
+            error.Canceled => return error.Canceled,
+            error.WriteFailed => continue :sw writer.err.?,
+            error.SocketUnconnected => return .close, // connection is closed
+            else => |e| return e,
         }
-        return err;
     };
 
     return .responded;

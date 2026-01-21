@@ -424,9 +424,13 @@ pub const Server = struct {
             },
         };
 
-        res catch |e| {
-            if (e == error.Canceled) return error.Canceled;
-            log.err("{}", .{e});
+        res catch |err| {
+            sw: switch (@as(anyerror, err)) {
+                error.Canceled => return error.Canceled,
+                error.ReadFailed => continue :sw reader.err.?,
+                error.WriteFailed => continue :sw writer.err.?,
+                else => |e| log.err("{}", .{e}),
+            }
         };
     }
 

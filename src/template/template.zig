@@ -1,7 +1,6 @@
 const std = @import("std");
 const assert = std.debug.assert;
 const meta = std.meta;
-const indexOfPosLinear = std.mem.indexOfPosLinear;
 const Writer = std.Io.Writer;
 
 pub fn Iterator(comptime T: type) type {
@@ -76,7 +75,7 @@ pub fn print(writer: *Writer, comptime tmpl: []const u8, args: anytype) !void {
             const name = tmpl[fmt_begin + 1 .. fmt_end];
             const end_tag = "{{/" ++ name ++ "}}";
 
-            const pos = comptime std.mem.indexOfPosLinear(u8, tmpl, i, end_tag);
+            const pos = comptime std.mem.findPos(u8, tmpl, i, end_tag);
             if (pos == null) @compileError("missing closing tag '" ++ end_tag ++ "'");
 
             const field_pos = meta.fieldIndex(ArgsType, name) orelse
@@ -124,7 +123,7 @@ pub fn print(writer: *Writer, comptime tmpl: []const u8, args: anytype) !void {
 pub fn include(comptime tmpl: []const u8, comptime tag: []const u8, comptime content: []const u8) []const u8 {
     @setEvalBranchQuota(20000);
     const sec = "<!--#" ++ tag ++ "-->";
-    const start = comptime indexOfPosLinear(u8, tmpl, 0, sec);
+    const start = comptime std.mem.findPos(u8, tmpl, 0, sec);
     if (start == null) @compileError("missing tag " ++ sec);
     const end = start.? + sec.len;
     return tmpl[0..start.?] ++ content ++ tmpl[end..];

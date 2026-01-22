@@ -12,6 +12,7 @@ const Router = http.Router;
 const Context = http.Context;
 const Route = http.Route;
 const Respond = http.Respond;
+const Response = http.Response;
 const SSEWriter = http.SSEWriter;
 const ChunkWriter = http.ChunkWriter;
 
@@ -60,19 +61,22 @@ fn sendData(io: Io, w: *Io.Writer) !void {
     try cw.end();
 }
 
+fn counterResponse(io: Io, response: *Response, w: *Io.Writer) !void {
+    try response.headers.put("Cache-Control", "no-cache");
+    try response.headers.put("Transfer-Encoding", "chunked");
+    response.status = .OK;
+    response.mime = .SSE;
+    try response.headers_into_writer(w, null);
+    try w.flush();
+    try sendData(io, w);
+}
+
 fn counter_handler(ctx: *const Context, _: void) !Respond {
     var buf: [1024]u8 = undefined;
     var writer = ctx.stream.writer(ctx.io, &buf);
     const w = &writer.interface;
 
-    try ctx.response.headers.put("Cache-Control", "no-cache");
-    try ctx.response.headers.put("Transfer-Encoding", "chunked");
-    ctx.response.status = .OK;
-    ctx.response.mime = .SSE;
-    try ctx.response.headers_into_writer(w, null);
-    try w.flush();
-
-    sendData(ctx.io, w) catch |err| {
+    counterResponse(ctx.io, ctx.response, w) catch |err| {
         sw: switch (@as(anyerror, err)) {
             error.Canceled => return error.Canceled,
             error.WriteFailed => continue :sw writer.err.?,

@@ -145,7 +145,7 @@ pub const Server = struct {
         }
 
         const fds = try std.Io.Threaded.pipe2(.{});
-        return Self{ .config = config, .provision_pool = provision_pool, .connection_count = connection_count, .allocator = allocator, .io = io, .stop_event = .{ .{ .handle = fds[0] }, .{ .handle = fds[1] } } };
+        return Self{ .config = config, .provision_pool = provision_pool, .connection_count = connection_count, .allocator = allocator, .io = io, .stop_event = .{ .{ .handle = fds[0], .flags = .{ .nonblocking = false } }, .{ .handle = fds[1], .flags = .{ .nonblocking = false } } } };
     }
 
     pub fn deinit(self: *const Self) void {

@@ -440,15 +440,18 @@ pub const Server = struct {
         var group: Io.Group = .init;
         defer group.cancel(io);
 
-        var e = io.async(stopEvent, .{ io, self.stop_event[0] });
-        defer e.cancel(io);
+        const Result = union(enum) { e: void, s: Io.net.Server.AcceptError!Io.net.Stream };
+        var select_buf: [1]Result = undefined;
+        var select: Io.Select(Result) = .init(io, &select_buf);
+        defer select.cancel();
+
+        try select.concurrent(.e, stopEvent, .{ io, self.stop_event[0] });
 
         while (true) {
-            var s = io.async(Io.net.Server.accept, .{ server, io });
-            defer _ = s.cancel(io) catch {};
+            try select.concurrent(.s, Io.net.Server.accept, .{ server, io });
 
-            switch (try io.select(.{ .e = &e, .s = &s })) {
-                .e => break,
+            switch (try select.await()) {
+                .e => return,
                 .s => |stream| {
                     if (self.config.connection_count_max) |max| if (@atomicLoad(usize, self.connection_count, .acquire) > max) {
                         log.warn("over connection max, closing", .{});

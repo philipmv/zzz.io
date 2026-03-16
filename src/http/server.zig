@@ -443,7 +443,7 @@ pub const Server = struct {
         const Result = union(enum) { e: void, s: Io.net.Server.AcceptError!Io.net.Stream };
         var select_buf: [1]Result = undefined;
         var select: Io.Select(Result) = .init(io, &select_buf);
-        defer select.cancel();
+        defer select.cancelDiscard();
 
         try select.concurrent(.e, stopEvent, .{ io, self.stop_event[0] });
 

@@ -13,7 +13,7 @@ pub const Method = enum(u8) {
     PATCH = 8,
 
     fn encode(method: []const u8) u64 {
-        var buffer = [1]u8{0} ** @sizeOf(u64);
+        var buffer: [@sizeOf(u64)]u8 = @splat(0);
         std.mem.copyForwards(u8, buffer[0..], method);
 
         return std.mem.readPackedIntNative(u64, buffer[0..], 0);

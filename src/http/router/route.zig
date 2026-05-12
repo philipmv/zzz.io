@@ -35,7 +35,7 @@ pub const Route = struct {
     path: []const u8,
 
     /// Route Handlers.
-    handlers: [9]?HandlerWithData = .{null} ** 9,
+    handlers: [9]?HandlerWithData = @splat(null),
 
     /// Initialize a route for the given path.
     pub fn init(path: []const u8) Route {

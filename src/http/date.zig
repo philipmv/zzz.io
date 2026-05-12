@@ -125,7 +125,7 @@ const testing = std.testing;
 test "Parse Basic Date (Buffer)" {
     const ts = 1727411110;
     var date: Date = Date.init(ts);
-    var buffer = [_]u8{0} ** 29;
+    var buffer: [29]u8 = @splat(0);
     const http_date = date.to_http_date();
     try testing.expectEqualStrings("Fri, 27 Sep 2024 04:25:10 GMT", try http_date.into_buf(buffer[0..]));
 }

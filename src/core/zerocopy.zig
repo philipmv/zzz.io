@@ -115,7 +115,7 @@ pub fn ZeroCopy(comptime T: type) type {
 }
 
 test "ZeroCopy: First" {
-    const garbage: []const u8 = &[_]u8{212} ** 128;
+    const garbage: []const u8 = &@as([128]u8, @splat(212));
 
     var zc: ZeroCopy(u8) = try .init(testing.allocator, 512);
     defer zc.deinit();
@@ -131,7 +131,7 @@ test "ZeroCopy: Growth" {
     var zc: ZeroCopy(u8) = try .init(testing.allocator, 16);
     defer zc.deinit();
 
-    const large_data = &[_]u8{1} ** 32;
+    const large_data: [32]u8 = @splat(1);
     const write_area = try zc.get_write_area(large_data.len);
     @memcpy(write_area, large_data);
     zc.mark_written(write_area.len);

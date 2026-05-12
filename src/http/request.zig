@@ -159,7 +159,7 @@ test "Expect ContentTooLong Error" {
         \\Accept: text/html
     ;
 
-    const request_text = std.fmt.comptimePrint(request_text_format, .{[_]u8{'a'} ** 4096});
+    const request_text = std.fmt.comptimePrint(request_text_format, .{@as([4096]u8, @splat('a'))});
     var request = Request.init(testing.allocator);
     defer request.deinit();
 
@@ -178,7 +178,7 @@ test "Expect URITooLong Error" {
         \\Accept: text/html
     ;
 
-    const request_text = std.fmt.comptimePrint(request_text_format, .{[_]u8{'a'} ** 4096});
+    const request_text = std.fmt.comptimePrint(request_text_format, .{@as([4096]u8, @splat('a'))});
     var request = Request.init(testing.allocator);
     defer request.deinit();
 
@@ -197,7 +197,7 @@ test "Expect Malformed when URI missing /" {
         \\Accept: text/html
     ;
 
-    const request_text = std.fmt.comptimePrint(request_text_format, .{[_]u8{'a'} ** 256});
+    const request_text = std.fmt.comptimePrint(request_text_format, .{@as([256]u8, @splat('a'))});
     var request = Request.init(testing.allocator);
     defer request.deinit();
 

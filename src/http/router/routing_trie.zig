@@ -389,7 +389,7 @@ test "Routing with Paths" {
     var q = AnyCaseStringMap.init(testing.allocator);
     defer q.deinit();
 
-    var captures: [8]Capture = [_]Capture{undefined} ** 8;
+    var captures: [8]Capture = @splat(undefined);
 
     try testing.expectEqual(null, try s.get_bundle(testing.allocator, "/item/name", captures[0..], &q));
 
@@ -420,7 +420,7 @@ test "Routing with Remaining" {
     var q = AnyCaseStringMap.init(testing.allocator);
     defer q.deinit();
 
-    var captures: [8]Capture = [_]Capture{undefined} ** 8;
+    var captures: [8]Capture = @splat(undefined);
 
     try testing.expectEqual(null, try s.get_bundle(testing.allocator, "/item/name", captures[0..], &q));
 
@@ -476,7 +476,7 @@ test "Routing with Queries" {
     var q = AnyCaseStringMap.init(testing.allocator);
     defer q.deinit();
 
-    var captures: [8]Capture = [_]Capture{undefined} ** 8;
+    var captures: [8]Capture = @splat(undefined);
 
     try testing.expectEqual(null, try s.get_bundle(
         testing.allocator,

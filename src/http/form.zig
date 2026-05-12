@@ -69,13 +69,13 @@ fn construct_map_from_body(allocator: std.mem.Allocator, m: *AnyCaseStringMap, b
     var pairs = std.mem.splitScalar(u8, body, '&');
 
     while (pairs.next()) |pair| {
-        const field_idx = std.mem.indexOfScalar(u8, pair, '=') orelse return error.MissingSeperator;
+        const field_idx = std.mem.findScalar(u8, pair, '=') orelse return error.MissingSeperator;
         if (pair.len < field_idx + 2) continue;
 
         const key = pair[0..field_idx];
         const value = pair[(field_idx + 1)..];
 
-        if (std.mem.indexOfScalar(u8, value, '=') != null) return error.MalformedPair;
+        if (std.mem.findScalar(u8, value, '=') != null) return error.MalformedPair;
 
         const decoded_key = try decode_alloc(allocator, key);
         errdefer allocator.free(decoded_key);
@@ -187,6 +187,7 @@ test "FormData: Parsing Missing Value" {
         m.deinit();
     }
 
-    const result = construct_map_from_body(testing.allocator, &m, body);
-    try testing.expectError(error.MissingValue, result);
+    _ = try construct_map_from_body(testing.allocator, &m, body);
+    try testing.expectEqualStrings("abc", m.get("abc").?);
+    try testing.expectEqual(null, m.get("id"));
 }

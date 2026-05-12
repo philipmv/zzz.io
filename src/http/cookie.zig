@@ -75,7 +75,7 @@ pub const Cookie = struct {
         if (self.secure) try writer.writeAll("; Secure");
         if (self.http_only) try writer.writeAll("; HttpOnly");
 
-        return list.written();
+        return list.toOwnedSlice();
     }
 };
 

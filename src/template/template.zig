@@ -128,3 +128,18 @@ pub fn include(comptime tmpl: []const u8, comptime tag: []const u8, comptime con
     const end = start.? + sec.len;
     return tmpl[0..start.?] ++ content ++ tmpl[end..];
 }
+
+pub fn cut(comptime tmpl: []const u8, comptime section: []const u8) []const u8 {
+    @setEvalBranchQuota(60000);
+    const start_sec = "<!--@" ++ section ++ "-->";
+    const end_sec = "<!--/" ++ section ++ "-->";
+
+    comptime var pos = std.mem.findPos(u8, tmpl, 0, start_sec);
+    if (pos == null) @compileError("missing start section " ++ start_sec);
+    const start = pos.? + start_sec.len;
+
+    pos = comptime std.mem.findPos(u8, tmpl, start, end_sec);
+    if (pos == null) @compileError("missing closing section " ++ end_sec);
+
+    return tmpl[start..pos.?];
+}
